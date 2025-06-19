@@ -5,8 +5,13 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+# NOWA SEKCJA: Dodajemy uprawnienia dla całego pipeline'u
+permissions:
+  contents: read # Pozwalamy na odczyt kodu
+  security-events: write # Pozwalamy na zapisywanie wyników w zakładce Security
+
 jobs:
-  # ------ ZADANIE 1: Budowanie, testowanie i skanowanie zależności (to co miałeś) ------
+  # Zadanie 1: Budowanie, testowanie i skanowanie zależności
   build-and-test:
     name: Build, Test & SCA Scan
     runs-on: ubuntu-latest
@@ -19,7 +24,7 @@ jobs:
         with:
           node-version: '20.x'
 
-      - name: Install dependencies and build app (via postinstall)
+      - name: Install dependencies and build app
         run: npm install
 
       - name: Smoke Test
@@ -31,29 +36,16 @@ jobs:
       - name: Run SCA scan with npm audit
         run: npm audit --audit-level=high || true
 
-  # ------ ZADANIE 2: Skanowanie kodu źródłowego (nowy dodatek) ------
+  # Zadanie 2: Skanowanie kodu źródłowego (poprawiona wersja)
   sast-scan:
     name: Static Code Analysis (SAST)
-    
-    # Ta linia jest kluczowa! Mówi ona, że to zadanie musi poczekać,
-    # aż zadanie 'build-and-test' zakończy się sukcesem.
     needs: build-and-test
-    
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository code
-        # Każde zadanie działa na nowej, czystej maszynie, 
-        # więc musimy ponownie pobrać kod.
         uses: actions/checkout@v4
 
       - name: Run Semgrep SAST scan
-        # Ta gotowa akcja robi całą magię za nas.
-        # Używamy predefiniowanego zestawu reguł bezpieczeństwa.
+        # Używamy teraz najprostszej możliwej wersji wywołania,
+        # która uruchomi domyślny zestaw reguł.
         uses: semgrep/semgrep-action@v2
-        with:
-          config: >-
-            p/ci
-            p/default
-            p/javascript
-            p/typescript
-            p/owasp-top-ten
