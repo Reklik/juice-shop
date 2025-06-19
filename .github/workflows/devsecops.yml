@@ -52,3 +52,24 @@ jobs:
         env:
           # Przekazujemy nasz token API do kontenera
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
+  secrets-scan:
+    name: Secrets Scan
+    needs: build-and-test # Uruchom po zadaniu 1, może działać równolegle z SAST
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+        # Musimy pobrać pełną historię, aby skaner mógł porównać zmiany
+        with:
+          fetch-depth: 0 
+
+      - name: Run TruffleHog secrets scan
+        # Używamy oficjalnej akcji od TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          # Skanuj tylko zmiany od ostatniego pusha - bardzo szybkie
+          base: ${{ github.event.before }}
+          head: ${{ github.sha }}
+          # Dodatkowe flagi dla lepszych wyników
+          extra_args: --only-verified --fail
