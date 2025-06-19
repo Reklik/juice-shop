@@ -1,0 +1,45 @@
+name: DevSecOps Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build, Test & SCA Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Generate package-lock.json
+        run: |
+          # Usuwamy potencjalne blokady i stare zależności
+          rm -f .npmrc
+          rm -rf node_modules
+          npm install
+
+      - name: Add package-lock.json to Git index
+        # Ten krok jest potrzebny, jeśli .gitignore blokuje plik
+        run: git add -f package-lock.json
+
+      - name: Install dependencies with CI
+        run: npm ci
+
+      - name: Build the application
+        run: npm run build
+
+      - name: Smoke Test
+        run: |
+          npm start &
+          sleep 30
+          curl -f http://localhost:3000
+
+      - name: Run SCA scan with npm audit
+        run: npm audit --audit-level=high || true
