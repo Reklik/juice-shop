@@ -10,42 +10,45 @@ permissions:
   security-events: write
 
 jobs:
+  # Zadanie 1: Pozostaje bez zmian
   build-and-test:
     name: Build, Test & SCA Scan
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository code
         uses: actions/checkout@v4
-
       - name: Setup Node.js environment
         uses: actions/setup-node@v4
         with:
           node-version: '20.x'
-
       - name: Install dependencies and build app
         run: npm install
-
       - name: Smoke Test
         run: |
           npm start &
           sleep 30
           curl -f http://localhost:3000
-
       - name: Run SCA scan with npm audit
         run: npm audit --audit-level=high || true
 
+  # Zadanie 2: Skanowanie SAST - teraz w 100% zgodne z dokumentacją
   sast-scan:
     name: Static Code Analysis (SAST)
     needs: build-and-test
     runs-on: ubuntu-latest
+    
+    # KROK 1: Uruchamiamy całe zadanie wewnątrz kontenera Semgrep
+    container:
+      image: semgrep/semgrep:latest # Używamy oficjalnego obrazu
+
     steps:
+      # Krok 2: Pobieramy kod DO kontenera
       - name: Checkout repository code
         uses: actions/checkout@v4
 
-      # NOWY, POPRAWNY SPOSÓB URUCHOMIENIA SEMGREP
+      # Krok 3: Uruchamiamy komendę semgrep ci wewnątrz kontenera
       - name: Run Semgrep SAST scan
-        # Używamy oficjalnego obrazu Docker semgrep/ci
-        uses: docker://semgrep/ci
+        run: semgrep ci
         env:
-          # Przekazujemy token, który zapisaliśmy w sekretach
+          # Przekazujemy nasz token API do kontenera
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
