@@ -42,6 +42,10 @@ jobs:
       - name: Checkout repository code
         uses: actions/checkout@v4
 
+      # NOWY, POPRAWNY SPOSÓB URUCHOMIENIA SEMGREP
       - name: Run Semgrep SAST scan
-        # OSTATECZNA POPRAWKA: Używamy pełnego, konkretnego numeru wersji
-        uses: semgrep/semgrep-action@v2.4.0
+        # Używamy oficjalnego obrazu Docker semgrep/ci
+        uses: docker://semgrep/ci
+        env:
+          # Przekazujemy token, który zapisaliśmy w sekretach
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
