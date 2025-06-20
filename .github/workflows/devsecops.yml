@@ -74,3 +74,24 @@ jobs:
           # Dodatkowe flagi dla lepszych wyników
           extra_args: --only-verified
         continue-on-error: true
+        
+  dast-scan:
+    name: Dynamic App Scan (DAST)
+    # Uruchom to zadanie, gdy pierwszy etap się powiedzie
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      # Nie potrzebujemy tutaj kodu, bo akcja sama pobierze gotowy obraz Docker
+      - name: Run OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.11.0
+        with:
+          # Ta akcja jest niesamowita - sama pobierze i uruchomi 
+          # najnowszy, publiczny obraz Docker z Juice Shopem
+          docker_name: 'owasp/juice-shop'
+          
+          # Podajemy jej, jaki adres ma atakować po uruchomieniu kontenera
+          target: 'http://localhost:3000'
+          
+          # Możemy określić, żeby pipeline nie padał, gdy znajdzie błędy,
+          # tylko je raportował. Ustawimy na 'true' na końcu. Na razie 'false'.
+          fail_action: false
