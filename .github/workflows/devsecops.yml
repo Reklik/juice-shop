@@ -75,7 +75,7 @@ jobs:
           extra_args: --only-verified
         continue-on-error: true
         
-   dast-scan:
+  dast-scan:
     name: Dynamic Analysis (DAST)
     needs: build-and-test
     runs-on: ubuntu-latest
