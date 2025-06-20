@@ -5,14 +5,12 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
-# POPRAWKA: Dodajemy uprawnienia do tworzenia zgłoszeń (issues)
 permissions:
   contents: read
   security-events: write
-  issues: write # <--- TA LINIA NAPRAWIA BŁĄD DAST
+  issues: write # Zostawiamy to uprawnienie, nie szkodzi
 
 jobs:
-  # Zadanie 1: Bez zmian
   build-and-test:
     name: Build, Test & SCA Scan
     runs-on: ubuntu-latest
@@ -33,7 +31,6 @@ jobs:
       - name: Run SCA scan with npm audit
         run: npm audit --audit-level=high || true
 
-  # Zadanie 2: Bez zmian
   sast-scan:
     name: Static Code Analysis (SAST)
     needs: build-and-test
@@ -48,7 +45,6 @@ jobs:
         env:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
 
-  # Zadanie 3: Bez zmian
   secrets-scan:
     name: Secrets Scan
     needs: build-and-test
@@ -65,7 +61,37 @@ jobs:
           head: ${{ github.sha }}
           extra_args: --only-verified
 
-  # Zadanie 4: Bez zmian
+  image-scan-and-push:
+    name: Build, Scan, and Push Docker Image
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/juice-shop:latest,${{ secrets.DOCKERHUB_USERNAME }}/juice-shop:${{ github.sha }}
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ secrets.DOCKERHUB_USERNAME }}/juice-shop:latest'
+          format: 'table'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '0'
+          ignore-unfixed: true
+
   dast-scan:
     name: Dynamic Analysis (DAST)
     needs: build-and-test
@@ -80,24 +106,6 @@ jobs:
         with:
           target: 'http://localhost:3000/'
           artifact_name: zap_scan_report
-
-  # ------ NOWE ZADANIE 5: Skanowanie obrazu kontenera ------
-  image-scan:
-    name: Container Image Scan (Trivy)
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository code
-        uses: actions/checkout@v4
-
-      - name: Build a Docker image from Dockerfile
-        run: docker build -t juice-shop-image-to-scan:latest .
-
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: 'juice-shop-image-to-scan:latest'
-          format: 'table'
-          severity: 'HIGH,CRITICAL'
-          exit-code: '0'
-          ignore-unfixed: true
+          # ------ OSTATECZNA POPRAWKA JEST TUTAJ ------
+          # Ta linia mówi ZAP-owi, żeby nie próbował tworzyć zgłoszeń (Issues)
+          allow_issue_writing: false
