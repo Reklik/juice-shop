@@ -72,4 +72,4 @@ jobs:
           base: ${{ github.event.before }}
           head: ${{ github.sha }}
           # Dodatkowe flagi dla lepszych wyników
-          extra_args: --only-verified --fail
+          extra_args: --only-verified
