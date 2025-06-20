@@ -5,12 +5,14 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+# POPRAWKA: Dodajemy uprawnienia do tworzenia zgłoszeń (issues)
 permissions:
   contents: read
   security-events: write
+  issues: write # <--- TA LINIA NAPRAWIA BŁĄD DAST
 
 jobs:
-  # Zadanie 1: Pozostaje bez zmian
+  # Zadanie 1: Bez zmian
   build-and-test:
     name: Build, Test & SCA Scan
     runs-on: ubuntu-latest
@@ -31,69 +33,71 @@ jobs:
       - name: Run SCA scan with npm audit
         run: npm audit --audit-level=high || true
 
-  # Zadanie 2: Skanowanie SAST - teraz w 100% zgodne z dokumentacją
+  # Zadanie 2: Bez zmian
   sast-scan:
     name: Static Code Analysis (SAST)
     needs: build-and-test
     runs-on: ubuntu-latest
-    
-    # KROK 1: Uruchamiamy całe zadanie wewnątrz kontenera Semgrep
     container:
-      image: semgrep/semgrep:latest # Używamy oficjalnego obrazu
-
+      image: semgrep/semgrep:latest
     steps:
-      # Krok 2: Pobieramy kod DO kontenera
       - name: Checkout repository code
         uses: actions/checkout@v4
-
-      # Krok 3: Uruchamiamy komendę semgrep ci wewnątrz kontenera
       - name: Run Semgrep SAST scan
         run: semgrep ci
         env:
-          # Przekazujemy nasz token API do kontenera
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
 
+  # Zadanie 3: Bez zmian
   secrets-scan:
     name: Secrets Scan
-    needs: build-and-test # Uruchom po zadaniu 1, może działać równolegle z SAST
+    needs: build-and-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository code
         uses: actions/checkout@v4
-        # Musimy pobrać pełną historię, aby skaner mógł porównać zmiany
         with:
-          fetch-depth: 0 
-
+          fetch-depth: 0
       - name: Run TruffleHog secrets scan
-        # Używamy oficjalnej akcji od TruffleHog
         uses: trufflesecurity/trufflehog@main
         with:
-          # Skanuj tylko zmiany od ostatniego pusha - bardzo szybkie
           base: ${{ github.event.before }}
           head: ${{ github.sha }}
-          # Dodatkowe flagi dla lepszych wyników
           extra_args: --only-verified
-        continue-on-error: true
-        
+
+  # Zadanie 4: Bez zmian
   dast-scan:
     name: Dynamic Analysis (DAST)
     needs: build-and-test
     runs-on: ubuntu-latest
     steps:
-      # Krok 1: Uruchom kontener z aplikacją Juice Shop w tle
-      # Dajemy mu nazwę 'juice_shop_for_scan', żeby łatwo się do niego odnieść
       - name: Start Juice Shop container
         run: docker run -d --name juice_shop_for_scan -p 3000:3000 bkimminich/juice-shop
-
-      # Krok 2: Czekamy chwilę, żeby aplikacja wstała
       - name: Wait for application to start
         run: sleep 30
-
-      # Krok 3: Uruchamiamy skanowanie ZAP, wskazując na działający kontener
       - name: OWASP ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.11.0
         with:
-          # Cel skanowania - ZAP będzie miał dostęp do tego adresu,
-          # bo oba kontenery działają w tej samej sieci runnera
           target: 'http://localhost:3000/'
           artifact_name: zap_scan_report
+
+  # ------ NOWE ZADANIE 5: Skanowanie obrazu kontenera ------
+  image-scan:
+    name: Container Image Scan (Trivy)
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Build a Docker image from Dockerfile
+        run: docker build -t juice-shop-image-to-scan:latest .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'juice-shop-image-to-scan:latest'
+          format: 'table'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '0'
+          ignore-unfixed: true
