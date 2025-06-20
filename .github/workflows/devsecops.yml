@@ -87,7 +87,7 @@ jobs:
         with:
           # Ta akcja jest niesamowita - sama pobierze i uruchomi 
           # najnowszy, publiczny obraz Docker z Juice Shopem
-          docker_name: 'owasp/juice-shop'
+          docker_name: 'bkimminich/juice-shop'
           
           # Podajemy jej, jaki adres ma atakować po uruchomieniu kontenera
           target: 'http://localhost:3000'
