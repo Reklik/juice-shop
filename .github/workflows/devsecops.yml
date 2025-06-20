@@ -8,7 +8,7 @@ on:
 permissions:
   contents: read
   security-events: write
-  issues: write # To uprawnienie jest potrzebne, nawet jeśli wyłączamy tworzenie Issues
+  issues: write
 
 jobs:
   # Zadanie 1: Budowanie i testowanie aplikacji
@@ -64,7 +64,7 @@ jobs:
           head: ${{ github.sha }}
           extra_args: --only-verified
 
-  # Zadanie 4: Skanowanie działającej aplikacji (DAST) - z poprawką
+  # Zadanie 4: Skanowanie działającej aplikacji (DAST) - z poprawką nazwy artefaktu
   dast-scan:
     name: Dynamic Analysis (DAST)
     needs: build-and-test
@@ -78,11 +78,11 @@ jobs:
         uses: zaproxy/action-baseline@v0.11.0
         with:
           target: 'http://localhost:3000/'
-          artifact_name: zap_scan_report
-          # POPRAWKA: Ta linia sprawi, że pipeline przejdzie na zielono
+          # POPRAWKA: Zmieniamy nazwę artefaktu na bezpieczniejszą
+          artifact_name: 'zap-scan-report'
           allow_issue_writing: false
 
-  # Zadanie 5: Skanowanie obrazu kontenera (bez wypychania)
+  # Zadanie 5: Skanowanie obrazu kontenera (Trivy) - NOWY ETAP
   image-scan:
     name: Container Image Scan (Trivy)
     needs: build-and-test
